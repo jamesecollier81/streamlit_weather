@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from datetime import datetime, timedelta, date
 import altair as alt
-from streamlit_geolocation import streamlit_geolocation
 
 # Setup the Open-Meteo API client with cache and retry on error
 @st.cache_resource
@@ -40,13 +39,9 @@ def fetch_weather_data(latitude, longitude):
 # Streamlit app
 st.title('Weather Forecast App')
 
-location = streamlit_geolocation()
-
-st.write(location)
-
 # User input for location
-latitude = st.location('latitude')
-longitude = st.location('longitude')
+latitude = st.number_input('Latitude', value=36.1676029)
+longitude = st.number_input('Longitude', value=-86.8521476)
 
 if st.button('Fetch Weather Data'):
     response = fetch_weather_data(latitude, longitude)
