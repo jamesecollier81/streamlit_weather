@@ -98,22 +98,36 @@ if st.button('Fetch Weather Data'):
     }
     daily_dataframe = pd.DataFrame(data=daily_data)
 
-    # Plot daily forecast
+       # Plot daily forecast
     st.header('Daily Temperature Forecast')
-    fig, ax = plt.subplots(figsize=(15, 8))
-    ax.plot(daily_dataframe['date'], daily_dataframe['temperature_2m_max'], label='Max Temperature')
-    ax.plot(daily_dataframe['date'], daily_dataframe['temperature_2m_min'], label='Min Temperature')
-    ax.plot(daily_dataframe['date'], daily_dataframe['apparent_temperature_max'], label='Max Apparent Temperature', linestyle='--')
-    ax.plot(daily_dataframe['date'], daily_dataframe['apparent_temperature_min'], label='Min Apparent Temperature', linestyle='--')
-    ax.set_xlabel('Date')
-    ax.set_ylabel('Temperature (°F)')
-    ax.legend(loc='upper right', edgecolor='grey', framealpha=0.5, shadow=True, fancybox=True)
-    #ax.grid(True)
-    ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
-    ax.xaxis.set_major_locator(mdates.DayLocator())
-    plt.xticks(rotation=90, ha='center')
-    plt.tight_layout()
-    st.pyplot(fig)
+
+    # Melt the dataframe to long format for Altair
+    daily_long = pd.melt(daily_dataframe, 
+                         id_vars=['date'], 
+                         value_vars=['temperature_2m_max', 'temperature_2m_min', 
+                                     'apparent_temperature_max', 'apparent_temperature_min'],
+                         var_name='Measure', value_name='Temperature')
+
+    # Create the Altair chart
+    daily_chart = alt.Chart(daily_long).mark_line(point=True).encode(
+        x=alt.X('date:T', axis=alt.Axis(format='%Y-%m-%d', labelAngle=-45, title='Date')),
+        y=alt.Y('Temperature:Q', axis=alt.Axis(title='Temperature (°F)')),
+        color=alt.Color('Measure:N', legend=alt.Legend(title="Temperature Measure")),
+        tooltip=['date:T', 'Measure:N', 'Temperature:Q']
+    ).properties(
+        width=800,
+        height=400,
+        title='Daily Temperature Forecast'
+    ).interactive()
+
+    # Customize the legend
+    daily_chart = daily_chart.configure_legend(
+        orient='bottom',
+        labelFontSize=12,
+        titleFontSize=14
+    )
+
+    st.altair_chart(daily_chart, use_container_width=True)
 
     # Plot hourly forecast
     st.header('Hourly Forecast (Next 48 Hours)')
@@ -133,7 +147,7 @@ if st.button('Fetch Weather Data'):
         color='Measure:N',
         tooltip=['date:T', 'Measure:N', 'Value:Q']
     ).properties(
-        width=700,
+        width=800,
         height=400
     ).interactive()
 
