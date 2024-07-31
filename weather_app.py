@@ -3,16 +3,10 @@ import openmeteo_requests
 import requests_cache
 import pandas as pd
 from retry_requests import retry
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+from datetime import datetime, timedelta, date
 import altair as alt
-from datetime import date, timedelta
-
-# Initialize session state variables
-if 'latitude' not in st.session_state:
-    st.session_state.latitude = 35
-if 'longitude' not in st.session_state:
-    st.session_state.longitude = -85
-if 'location_obtained' not in st.session_state:
-    st.session_state.location_obtained = False
 
 # Setup the Open-Meteo API client with cache and retry on error
 @st.cache_resource
@@ -45,71 +39,12 @@ def fetch_weather_data(latitude, longitude):
 # Streamlit app
 st.title('Weather Forecast App')
 
-# Add JavaScript to get user's location
-location_html = """
-<button onclick="getLocation()">Use My Location</button>
-<p id="location"></p>
-
-<script>
-function getLocation() {
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(showPosition, showError);
-    } else {
-        document.getElementById("location").innerHTML = "Geolocation is not supported by this browser.";
-    }
-}
-
-function showPosition(position) {
-    var lat = position.coords.latitude;
-    var lon = position.coords.longitude;
-    document.getElementById("location").innerHTML = "Latitude: " + lat + "<br>Longitude: " + lon;
-    
-    // Send the location to Streamlit
-    streamlit.setComponentValue({
-        latitude: lat,
-        longitude: lon
-    });
-}
-
-function showError(error) {
-    switch(error.code) {
-        case error.PERMISSION_DENIED:
-            document.getElementById("location").innerHTML = "User denied the request for Geolocation."
-            break;
-        case error.POSITION_UNAVAILABLE:
-            document.getElementById("location").innerHTML = "Location information is unavailable."
-            break;
-        case error.TIMEOUT:
-            document.getElementById("location").innerHTML = "The request to get user location timed out."
-            break;
-        case error.UNKNOWN_ERROR:
-            document.getElementById("location").innerHTML = "An unknown error occurred."
-            break;
-    }
-}
-</script>
-"""
-
-location_component = st.components.v1.html(location_html, height=100)
-
-if location_component:
-    # Check if location data has been sent from JavaScript
-    if location_component.get('latitude') and location_component.get('longitude'):
-        st.session_state.latitude = location_component['latitude']
-        st.session_state.longitude = location_component['longitude']
-        st.session_state.location_obtained = True
-        st.experimental_rerun()
-
-# Display current location
-st.write(f"Current Location: Latitude {st.session_state.latitude:.4f}, Longitude {st.session_state.longitude:.4f}")
-
 # User input for location
-st.session_state.latitude = st.number_input('Latitude', value=st.session_state.latitude)
-st.session_state.longitude = st.number_input('Longitude', value=st.session_state.longitude)
+latitude = st.number_input('Latitude', value=36.1676029)
+longitude = st.number_input('Longitude', value=-86.8521476)
 
-if st.button('Fetch Weather Data') or st.session_state.location_obtained:
-    st.session_state.location_obtained = False  # Reset the flag
-    response = fetch_weather_data(st.session_state.latitude, st.session_state.longitude)
+if st.button('Fetch Weather Data'):
+    response = fetch_weather_data(latitude, longitude)
 
     # Display current weather
     st.header('Current Weather')
@@ -121,6 +56,8 @@ if st.button('Fetch Weather Data') or st.session_state.location_obtained:
     st.write(f"Rain: {current.Variables(4).Value():.2f} inches")
     st.write(f"Showers: {current.Variables(5).Value():.2f} inches")
     st.write(f"Snow: {current.Variables(6).Value():.2f} inches")
+    #st.write(f"IsDay: {current.Variables(7).Value()}")
+    #st.write(f"WeatherCode: {current.Variables(8).Value()}")
 
     # Process hourly data
     hourly = response.Hourly()
@@ -158,7 +95,7 @@ if st.button('Fetch Weather Data') or st.session_state.location_obtained:
     }
     daily_dataframe = pd.DataFrame(data=daily_data)
 
-    # Plot daily forecast
+       # Plot daily forecast
     st.header('Daily Temperature Forecast')
 
     # Melt the dataframe to long format for Altair
