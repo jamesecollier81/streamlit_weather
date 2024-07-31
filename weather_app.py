@@ -7,11 +7,6 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from datetime import datetime, timedelta, date
 import altair as alt
-from aquarel import load_theme
-set_theme = "minimal_dark"
-
-theme = load_theme(set_theme)
-theme.apply()
 
 # Setup the Open-Meteo API client with cache and retry on error
 @st.cache_resource
@@ -89,7 +84,7 @@ if st.button('Fetch Weather Data'):
             freq=pd.Timedelta(seconds=daily.Interval()),
             inclusive="left"
         ),
-        "temperature_2m_max": daily.Variables(0).ValuesAsNumpy(),
+        "Temp Max": daily.Variables(0).ValuesAsNumpy(),
         "temperature_2m_min": daily.Variables(1).ValuesAsNumpy(),
         "apparent_temperature_max": daily.Variables(2).ValuesAsNumpy(),
         "apparent_temperature_min": daily.Variables(3).ValuesAsNumpy(),
@@ -104,7 +99,7 @@ if st.button('Fetch Weather Data'):
     # Melt the dataframe to long format for Altair
     daily_long = pd.melt(daily_dataframe, 
                          id_vars=['date'], 
-                         value_vars=['temperature_2m_max', 'temperature_2m_min', 
+                         value_vars=['Temp Max', 'temperature_2m_min', 
                                      'apparent_temperature_max', 'apparent_temperature_min'],
                          var_name='Measure', value_name='Temperature')
 
@@ -112,7 +107,7 @@ if st.button('Fetch Weather Data'):
     daily_chart = alt.Chart(daily_long).mark_line(point=True).encode(
         x=alt.X('date:T', axis=alt.Axis(format='%Y-%m-%d', labelAngle=-45, title='Date')),
         y=alt.Y('Temperature:Q', axis=alt.Axis(title='Temperature (°F)')),
-        color=alt.Color('Measure:N', legend=alt.Legend(title="Temperature Measure")),
+        color=alt.Color('Measure:N', legend=alt.Legend(title="Measure")),
         tooltip=['date:T', 'Measure:N', 'Temperature:Q']
     ).properties(
         width=800,
