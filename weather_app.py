@@ -149,7 +149,7 @@ if st.button('Fetch Weather Data'):
     ).interactive()
     
     # Customize the legend
-    hourly_chart = chart.configure_legend(
+    hourly_chart = hourly_chart.configure_legend(
         orient='bottom',
         labelFontSize=12,
         titleFontSize=14
