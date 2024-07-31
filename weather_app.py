@@ -57,6 +57,9 @@ if st.button('Fetch Weather Data'):
     st.write(f"Relative Humidity: {current.Variables(1).Value():.1f}%")
     st.write(f"Apparent Temperature: {current.Variables(2).Value():.1f}°F")
     st.write(f"Precipitation: {current.Variables(3).Value():.2f} inches")
+    st.write(f"Rain: {current.Variables(4).Value():.2f} inches")
+    st.write(f"Showers: {current.Variables(5).Value():.2f} inches")
+    st.write(f"Snow: {current.Variables(6).Value():.2f} inches")
 
     # Process hourly data
     hourly = response.Hourly()
