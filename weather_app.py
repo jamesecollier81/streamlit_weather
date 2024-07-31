@@ -66,12 +66,12 @@ if st.button('Fetch Weather Data'):
             freq=pd.Timedelta(seconds=hourly.Interval()),
             inclusive="left"
         ),
-        "temperature_2m": hourly.Variables(0).ValuesAsNumpy(),
-        "relative_humidity_2m": hourly.Variables(1).ValuesAsNumpy(),
-        "dew_point_2m": hourly.Variables(2).ValuesAsNumpy(),
-        "apparent_temperature": hourly.Variables(3).ValuesAsNumpy(),
-        "precipitation_probability": hourly.Variables(4).ValuesAsNumpy(),
-        "cloud_cover": hourly.Variables(5).ValuesAsNumpy()
+        "Temp": hourly.Variables(0).ValuesAsNumpy(),
+        "Relative Humidity": hourly.Variables(1).ValuesAsNumpy(),
+        "Dew Point": hourly.Variables(2).ValuesAsNumpy(),
+        "Apparent Temperature": hourly.Variables(3).ValuesAsNumpy(),
+        "Precipitation Probability": hourly.Variables(4).ValuesAsNumpy(),
+        "Cloud Cover": hourly.Variables(5).ValuesAsNumpy()
     }
     hourly_dataframe = pd.DataFrame(data=hourly_data)
 
@@ -85,9 +85,9 @@ if st.button('Fetch Weather Data'):
             inclusive="left"
         ),
         "Temp Max": daily.Variables(0).ValuesAsNumpy(),
-        "temperature_2m_min": daily.Variables(1).ValuesAsNumpy(),
-        "apparent_temperature_max": daily.Variables(2).ValuesAsNumpy(),
-        "apparent_temperature_min": daily.Variables(3).ValuesAsNumpy(),
+        "Temp Min": daily.Variables(1).ValuesAsNumpy(),
+        "Apparent Temp Max": daily.Variables(2).ValuesAsNumpy(),
+        "Apparent Temp Min": daily.Variables(3).ValuesAsNumpy(),
         "sunrise": daily.Variables(4).ValuesAsNumpy(),
         "sunset": daily.Variables(5).ValuesAsNumpy()
     }
@@ -99,8 +99,8 @@ if st.button('Fetch Weather Data'):
     # Melt the dataframe to long format for Altair
     daily_long = pd.melt(daily_dataframe, 
                          id_vars=['date'], 
-                         value_vars=['Temp Max', 'temperature_2m_min', 
-                                     'apparent_temperature_max', 'apparent_temperature_min'],
+                         value_vars=['Temp Max', 'Temp Min', 
+                                     'Apparent Temp Max', 'Apparent Temp Min'],
                          var_name='Measure', value_name='Temperature')
 
     # Create the Altair chart
@@ -131,8 +131,8 @@ if st.button('Fetch Weather Data'):
 
     # Melt the dataframe to long format for Altair
     hourly_long = pd.melt(hourly_dataframe, id_vars=['date'], 
-                          value_vars=['temperature_2m', 'relative_humidity_2m', 'dew_point_2m', 
-                                      'apparent_temperature', 'precipitation_probability'],
+                          value_vars=['Temp', 'Relative Humidity', 'Dew Point', 
+                                      'Apparent Temperature', 'Precipitation Probability'],
                           var_name='Measure', value_name='Value')
 
     # Create the Altair chart
