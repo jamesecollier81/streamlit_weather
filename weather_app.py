@@ -24,7 +24,7 @@ def fetch_weather_data(latitude, longitude):
     params = {
         "latitude": latitude,
         "longitude": longitude,
-        "current": ["temperature_2m", "relative_humidity_2m", "apparent_temperature", "precipitation", "rain", "showers", "snowfall"],
+        "current": ["temperature_2m", "relative_humidity_2m", "apparent_temperature", "precipitation", "rain", "showers", "snowfall", "is_day", "weather_code"],
         "hourly": ["temperature_2m", "relative_humidity_2m", "dew_point_2m", "apparent_temperature", "precipitation_probability", "cloud_cover"],
         "daily": ["temperature_2m_max", "temperature_2m_min", "apparent_temperature_max", "apparent_temperature_min", "sunrise", "sunset"],
         "temperature_unit": "fahrenheit",
@@ -56,6 +56,8 @@ if st.button('Fetch Weather Data'):
     st.write(f"Rain: {current.Variables(4).Value():.2f} inches")
     st.write(f"Showers: {current.Variables(5).Value():.2f} inches")
     st.write(f"Snow: {current.Variables(6).Value():.2f} inches")
+    st.write(f"IsDay: {current.Variables(7).Value()}")
+    st.write(f"WeatherCode: {current.Variables(8).Value()}")
 
     # Process hourly data
     hourly = response.Hourly()
