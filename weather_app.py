@@ -6,6 +6,14 @@ from retry_requests import retry
 import altair as alt
 from datetime import date, timedelta
 
+# Initialize session state variables
+if 'latitude' not in st.session_state:
+    st.session_state.latitude = 35
+if 'longitude' not in st.session_state:
+    st.session_state.longitude = -85
+if 'location_obtained' not in st.session_state:
+    st.session_state.location_obtained = False
+
 # Setup the Open-Meteo API client with cache and retry on error
 @st.cache_resource
 def setup_openmeteo():
@@ -39,34 +47,69 @@ st.title('Weather Forecast App')
 
 # Add JavaScript to get user's location
 location_html = """
+<button onclick="getLocation()">Use My Location</button>
+<p id="location"></p>
+
 <script>
 function getLocation() {
     if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(function(position) {
-            var lat = position.coords.latitude;
-            var lon = position.coords.longitude;
-            document.getElementById("lat").value = lat;
-            document.getElementById("lon").value = lon;
-            document.getElementById("fetch_button").click();
-        });
+        navigator.geolocation.getCurrentPosition(showPosition, showError);
     } else {
-        alert("Geolocation is not supported by this browser.");
+        document.getElementById("location").innerHTML = "Geolocation is not supported by this browser.";
+    }
+}
+
+function showPosition(position) {
+    var lat = position.coords.latitude;
+    var lon = position.coords.longitude;
+    document.getElementById("location").innerHTML = "Latitude: " + lat + "<br>Longitude: " + lon;
+    
+    // Send the location to Streamlit
+    streamlit.setComponentValue({
+        latitude: lat,
+        longitude: lon
+    });
+}
+
+function showError(error) {
+    switch(error.code) {
+        case error.PERMISSION_DENIED:
+            document.getElementById("location").innerHTML = "User denied the request for Geolocation."
+            break;
+        case error.POSITION_UNAVAILABLE:
+            document.getElementById("location").innerHTML = "Location information is unavailable."
+            break;
+        case error.TIMEOUT:
+            document.getElementById("location").innerHTML = "The request to get user location timed out."
+            break;
+        case error.UNKNOWN_ERROR:
+            document.getElementById("location").innerHTML = "An unknown error occurred."
+            break;
     }
 }
 </script>
-<button onclick="getLocation()">Use My Location</button>
-<input type="hidden" id="lat">
-<input type="hidden" id="lon">
 """
 
-st.components.v1.html(location_html, height=50)
+location_component = st.components.v1.html(location_html, height=100)
+
+if location_component:
+    # Check if location data has been sent from JavaScript
+    if location_component.get('latitude') and location_component.get('longitude'):
+        st.session_state.latitude = location_component['latitude']
+        st.session_state.longitude = location_component['longitude']
+        st.session_state.location_obtained = True
+        st.experimental_rerun()
+
+# Display current location
+st.write(f"Current Location: Latitude {st.session_state.latitude:.4f}, Longitude {st.session_state.longitude:.4f}")
 
 # User input for location
-latitude = st.number_input('Latitude', value=35, key="latitude")
-longitude = st.number_input('Longitude', value=-85, key="longitude")
+st.session_state.latitude = st.number_input('Latitude', value=st.session_state.latitude)
+st.session_state.longitude = st.number_input('Longitude', value=st.session_state.longitude)
 
-if st.button('Fetch Weather Data', key="fetch_button"):
-    response = fetch_weather_data(latitude, longitude)
+if st.button('Fetch Weather Data') or st.session_state.location_obtained:
+    st.session_state.location_obtained = False  # Reset the flag
+    response = fetch_weather_data(st.session_state.latitude, st.session_state.longitude)
 
     # Display current weather
     st.header('Current Weather')
@@ -175,57 +218,3 @@ if st.button('Fetch Weather Data', key="fetch_button"):
         titleFontSize=14
     )
     st.altair_chart(hourly_chart, use_container_width=True)
-
-# JavaScript to update Streamlit
-st.markdown("""
-<script>
-const doc = window.parent.document;
-doc.addEventListener('DOMContentLoaded', function() {
-    const latInput = doc.querySelector('input[aria-label="Latitude"]');
-    const lonInput = doc.querySelector('input[aria-label="Longitude"]');
-    const fetchButton = doc.querySelector('button[kind="secondary"]');
-    
-    window.addEventListener('message', function(e) {
-        if (e.data.type === 'streamlit:setComponentValue') {
-            const data = e.data.value;
-            if (data.id === 'lat') {
-                latInput.value = data.value;
-                latInput.dispatchEvent(new Event('input', { bubbles: true }));
-            } else if (data.id === 'lon') {
-                lonInput.value = data.value;
-                lonInput.dispatchEvent(new Event('input', { bubbles: true }));
-            }
-        }
-    });
-    
-    const hiddenLat = doc.getElementById('lat');
-    const hiddenLon = doc.getElementById('lon');
-    
-    new MutationObserver(function(mutations) {
-        mutations.forEach(function(mutation) {
-            if (mutation.type === 'attributes' && mutation.attributeName === 'value') {
-                const id = mutation.target.id;
-                const value = mutation.target.value;
-                window.parent.postMessage({
-                    type: 'streamlit:setComponentValue',
-                    value: { id, value }
-                }, '*');
-            }
-        });
-    }).observe(hiddenLat, { attributes: true });
-    
-    new MutationObserver(function(mutations) {
-        mutations.forEach(function(mutation) {
-            if (mutation.type === 'attributes' && mutation.attributeName === 'value') {
-                const id = mutation.target.id;
-                const value = mutation.target.value;
-                window.parent.postMessage({
-                    type: 'streamlit:setComponentValue',
-                    value: { id, value }
-                }, '*');
-            }
-        });
-    }).observe(hiddenLon, { attributes: true });
-});
-</script>
-""", unsafe_allow_html=True)
