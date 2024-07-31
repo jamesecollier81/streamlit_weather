@@ -3,10 +3,8 @@ import openmeteo_requests
 import requests_cache
 import pandas as pd
 from retry_requests import retry
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
-from datetime import datetime, timedelta, date
 import altair as alt
+from datetime import date, timedelta
 
 # Setup the Open-Meteo API client with cache and retry on error
 @st.cache_resource
@@ -39,11 +37,35 @@ def fetch_weather_data(latitude, longitude):
 # Streamlit app
 st.title('Weather Forecast App')
 
-# User input for location
-latitude = st.number_input('Latitude', value=36.1676029)
-longitude = st.number_input('Longitude', value=-86.8521476)
+# Add JavaScript to get user's location
+location_html = """
+<script>
+function getLocation() {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function(position) {
+            var lat = position.coords.latitude;
+            var lon = position.coords.longitude;
+            document.getElementById("lat").value = lat;
+            document.getElementById("lon").value = lon;
+            document.getElementById("fetch_button").click();
+        });
+    } else {
+        alert("Geolocation is not supported by this browser.");
+    }
+}
+</script>
+<button onclick="getLocation()">Use My Location</button>
+<input type="hidden" id="lat">
+<input type="hidden" id="lon">
+"""
 
-if st.button('Fetch Weather Data'):
+st.components.v1.html(location_html, height=50)
+
+# User input for location
+latitude = st.number_input('Latitude', value=36.1676029, key="latitude")
+longitude = st.number_input('Longitude', value=-86.8521476, key="longitude")
+
+if st.button('Fetch Weather Data', key="fetch_button"):
     response = fetch_weather_data(latitude, longitude)
 
     # Display current weather
@@ -56,8 +78,6 @@ if st.button('Fetch Weather Data'):
     st.write(f"Rain: {current.Variables(4).Value():.2f} inches")
     st.write(f"Showers: {current.Variables(5).Value():.2f} inches")
     st.write(f"Snow: {current.Variables(6).Value():.2f} inches")
-    #st.write(f"IsDay: {current.Variables(7).Value()}")
-    #st.write(f"WeatherCode: {current.Variables(8).Value()}")
 
     # Process hourly data
     hourly = response.Hourly()
@@ -95,7 +115,7 @@ if st.button('Fetch Weather Data'):
     }
     daily_dataframe = pd.DataFrame(data=daily_data)
 
-       # Plot daily forecast
+    # Plot daily forecast
     st.header('Daily Temperature Forecast')
 
     # Melt the dataframe to long format for Altair
@@ -155,3 +175,57 @@ if st.button('Fetch Weather Data'):
         titleFontSize=14
     )
     st.altair_chart(hourly_chart, use_container_width=True)
+
+# JavaScript to update Streamlit
+st.markdown("""
+<script>
+const doc = window.parent.document;
+doc.addEventListener('DOMContentLoaded', function() {
+    const latInput = doc.querySelector('input[aria-label="Latitude"]');
+    const lonInput = doc.querySelector('input[aria-label="Longitude"]');
+    const fetchButton = doc.querySelector('button[kind="secondary"]');
+    
+    window.addEventListener('message', function(e) {
+        if (e.data.type === 'streamlit:setComponentValue') {
+            const data = e.data.value;
+            if (data.id === 'lat') {
+                latInput.value = data.value;
+                latInput.dispatchEvent(new Event('input', { bubbles: true }));
+            } else if (data.id === 'lon') {
+                lonInput.value = data.value;
+                lonInput.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        }
+    });
+    
+    const hiddenLat = doc.getElementById('lat');
+    const hiddenLon = doc.getElementById('lon');
+    
+    new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (mutation.type === 'attributes' && mutation.attributeName === 'value') {
+                const id = mutation.target.id;
+                const value = mutation.target.value;
+                window.parent.postMessage({
+                    type: 'streamlit:setComponentValue',
+                    value: { id, value }
+                }, '*');
+            }
+        });
+    }).observe(hiddenLat, { attributes: true });
+    
+    new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (mutation.type === 'attributes' && mutation.attributeName === 'value') {
+                const id = mutation.target.id;
+                const value = mutation.target.value;
+                window.parent.postMessage({
+                    type: 'streamlit:setComponentValue',
+                    value: { id, value }
+                }, '*');
+            }
+        });
+    }).observe(hiddenLon, { attributes: true });
+});
+</script>
+""", unsafe_allow_html=True)
