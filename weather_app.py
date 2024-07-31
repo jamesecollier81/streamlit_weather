@@ -6,6 +6,7 @@ from retry_requests import retry
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from datetime import datetime, timedelta, date
+import altair as alt
 from aquarel import load_theme
 set_theme = "minimal_dark"
 
