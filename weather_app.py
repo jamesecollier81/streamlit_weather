@@ -62,8 +62,8 @@ function getLocation() {
 st.components.v1.html(location_html, height=50)
 
 # User input for location
-latitude = st.number_input('Latitude', value=36.1676029, key="latitude")
-longitude = st.number_input('Longitude', value=-86.8521476, key="longitude")
+latitude = st.number_input('Latitude', value=35, key="latitude")
+longitude = st.number_input('Longitude', value=-85, key="longitude")
 
 if st.button('Fetch Weather Data', key="fetch_button"):
     response = fetch_weather_data(latitude, longitude)
