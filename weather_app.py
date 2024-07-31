@@ -6,6 +6,11 @@ from retry_requests import retry
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from datetime import datetime, timedelta, date
+from aquarel import load_theme
+set_theme = "minimal_dark"
+
+theme = load_theme(set_theme)
+theme.apply()
 
 # Setup the Open-Meteo API client with cache and retry on error
 @st.cache_resource
