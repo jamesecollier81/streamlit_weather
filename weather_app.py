@@ -119,20 +119,21 @@ if st.button('Fetch Weather Data'):
     end_date = date.today() + timedelta(days=2)
     hourly_dataframe = hourly_dataframe.loc[hourly_dataframe['date'].dt.date < end_date]
 
-    fig, ax = plt.subplots(figsize=(15, 8))
-    ax.plot(hourly_dataframe['date'], hourly_dataframe['temperature_2m'], label='Temperature')
-    ax.plot(hourly_dataframe['date'], hourly_dataframe['relative_humidity_2m'], label='Relative Humidity')
-    ax.plot(hourly_dataframe['date'], hourly_dataframe['dew_point_2m'], label='Dew Point')
-    ax.plot(hourly_dataframe['date'], hourly_dataframe['apparent_temperature'], label='Apparent Temperature')
-    ax.plot(hourly_dataframe['date'], hourly_dataframe['precipitation_probability'], label='Precip. Probability', linestyle='--')
-    ax.set_xlabel('When')
-    ax.set_ylabel('Temperature (°F)')
-    ax.legend(loc='upper right', edgecolor='grey', framealpha=0.5, shadow=True, fancybox=True)
-    #ax.grid(True)
-    ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
-    ax.xaxis.set_major_locator(mdates.DayLocator())
-    ax.xaxis.set_minor_locator(mdates.HourLocator(interval=2))
-    ax.xaxis.set_minor_formatter(mdates.DateFormatter('%H:%M'))
-    plt.xticks(rotation=90, ha='center')
-    plt.tight_layout()
-    st.pyplot(fig)
+    # Melt the dataframe to long format for Altair
+    hourly_long = pd.melt(hourly_dataframe, id_vars=['date'], 
+                          value_vars=['temperature_2m', 'relative_humidity_2m', 'dew_point_2m', 
+                                      'apparent_temperature', 'precipitation_probability'],
+                          var_name='Measure', value_name='Value')
+
+    # Create the Altair chart
+    chart = alt.Chart(hourly_long).mark_line().encode(
+        x=alt.X('date:T', axis=alt.Axis(format='%Y-%m-%d %H:%M', labelAngle=-90)),
+        y='Value:Q',
+        color='Measure:N',
+        tooltip=['date:T', 'Measure:N', 'Value:Q']
+    ).properties(
+        width=700,
+        height=400
+    ).interactive()
+
+    st.altair_chart(chart, use_container_width=True)
