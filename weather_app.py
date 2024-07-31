@@ -56,8 +56,8 @@ if st.button('Fetch Weather Data'):
     st.write(f"Rain: {current.Variables(4).Value():.2f} inches")
     st.write(f"Showers: {current.Variables(5).Value():.2f} inches")
     st.write(f"Snow: {current.Variables(6).Value():.2f} inches")
-    st.write(f"IsDay: {current.Variables(7).Value()}")
-    st.write(f"WeatherCode: {current.Variables(8).Value()}")
+    #st.write(f"IsDay: {current.Variables(7).Value()}")
+    #st.write(f"WeatherCode: {current.Variables(8).Value()}")
 
     # Process hourly data
     hourly = response.Hourly()
@@ -113,7 +113,7 @@ if st.button('Fetch Weather Data'):
         tooltip=['date:T', 'Measure:N', 'Temperature:Q']
     ).properties(
         width=800,
-        height=400,
+        height=500,
         title='Daily Temperature Forecast'
     ).interactive()
 
@@ -138,20 +138,20 @@ if st.button('Fetch Weather Data'):
                           var_name='Measure', value_name='Value')
 
     # Create the Altair chart
-    chart = alt.Chart(hourly_long).mark_line().encode(
+    hourly_chart = alt.Chart(hourly_long).mark_line().encode(
         x=alt.X('date:T', axis=alt.Axis(format='%Y-%m-%d %H:%M', labelAngle=-90)),
         y='Value:Q',
         color='Measure:N',
         tooltip=['date:T', 'Measure:N', 'Value:Q']
     ).properties(
         width=800,
-        height=400
+        height=500
     ).interactive()
     
     # Customize the legend
-    chart = chart.configure_legend(
+    hourly_chart = chart.configure_legend(
         orient='bottom',
         labelFontSize=12,
         titleFontSize=14
     )
-    st.altair_chart(chart, use_container_width=True)
+    st.altair_chart(hourly_chart, use_container_width=True)
