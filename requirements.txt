@@ -1,9 +1,7 @@
-bokeh==2.4.3
-gspread==5.6.2
-holoviews==1.15.4
-hvplot==0.8.2
-matplotlib==3.7.0
-numpy==1.24.1
-pandas==1.5.3
-seaborn==0.12.2
+aquarel==0.0.6
+openmeteo_requests==1.2.1
+requests-cache==1.2.1
+pandas==2.2.2
+matplotlib==3.9.0
+retry_requests==2.0.0
 streamlit==1.19.0
