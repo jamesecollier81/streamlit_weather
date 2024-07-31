@@ -150,5 +150,11 @@ if st.button('Fetch Weather Data'):
         width=800,
         height=400
     ).interactive()
-
+    
+    # Customize the legend
+    chart = chart.configure_legend(
+        orient='bottom',
+        labelFontSize=12,
+        titleFontSize=14
+    )
     st.altair_chart(chart, use_container_width=True)
