@@ -49,7 +49,7 @@ if 'longitude' not in st.session_state:
 
 # Add location button
 if st.button('Get My Location'):
-    loc = st.experimental_get_user_geo_location()
+    loc = st.get_user_geo_location()
     if loc:
         st.session_state.latitude = loc['latitude']
         st.session_state.longitude = loc['longitude']
