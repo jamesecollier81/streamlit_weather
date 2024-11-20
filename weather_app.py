@@ -47,14 +47,6 @@ if 'latitude' not in st.session_state:
 if 'longitude' not in st.session_state:
     st.session_state.longitude = -86.8521476
 
-# Add location button
-if st.button('Get My Location'):
-    loc = st.get_user_geo_location()
-    if loc:
-        st.session_state.latitude = loc['latitude']
-        st.session_state.longitude = loc['longitude']
-        st.rerun()
-
 # Use session state for the coordinates
 latitude = st.number_input('Latitude', value=st.session_state.latitude)
 longitude = st.number_input('Longitude', value=st.session_state.longitude)
