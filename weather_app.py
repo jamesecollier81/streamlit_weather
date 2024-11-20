@@ -37,104 +37,31 @@ def fetch_weather_data(latitude, longitude):
     }
     responses = openmeteo.weather_api(url, params=params)
     return responses[0]
-    
-def get_location():
-    location_html = """
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <style>
-            .location-button {
-                padding: 10px 20px;
-                background-color: #1565c0;
-                color: white;
-                border: none;
-                border-radius: 4px;
-                cursor: pointer;
-                font-size: 16px;
-            }
-            .location-button:hover {
-                background-color: #1976d2;
-            }
-            #status {
-                margin-top: 10px;
-                color: #666;
-            }
-        </style>
-    </head>
-    <body>
-        <button onclick="getLocation()" class="location-button">
-            Get My Location
-        </button>
-        <div id="status"></div>
-
-        <script>
-            function getLocation() {
-                const status = document.getElementById('status');
-                status.textContent = 'Requesting location...';
-                
-                if (!navigator.geolocation) {
-                    status.textContent = 'Geolocation is not supported by your browser';
-                    return;
-                }
-
-                navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                        const lat = position.coords.latitude;
-                        const lon = position.coords.longitude;
-                        status.textContent = `Location found: ${lat.toFixed(6)}, ${lon.toFixed(6)}`;
-                        
-                        // Send to Streamlit
-                        window.parent.postMessage({
-                            type: 'streamlit:setComponentValue',
-                            value: {lat: lat, lon: lon}
-                        }, '*');
-                    },
-                    (error) => {
-                        switch(error.code) {
-                            case error.PERMISSION_DENIED:
-                                status.textContent = 'Location permission denied';
-                                break;
-                            case error.POSITION_UNAVAILABLE:
-                                status.textContent = 'Location information unavailable';
-                                break;
-                            case error.TIMEOUT:
-                                status.textContent = 'Location request timed out';
-                                break;
-                            default:
-                                status.textContent = 'An unknown error occurred';
-                        }
-                    },
-                    {
-                        enableHighAccuracy: true,
-                        timeout: 5000,
-                        maximumAge: 0
-                    }
-                );
-            }
-        </script>
-    </body>
-    </html>
-    """
-    return components.html(location_html, height=100)
 
 # Streamlit app
 st.title('Weather Forecast App')
 
-# Add the location component
-location_data = get_location()
+# Initialize session state for coordinates if not already present
+if 'latitude' not in st.session_state:
+    st.session_state.latitude = 36.1676029
+if 'longitude' not in st.session_state:
+    st.session_state.longitude = -86.8521476
 
-# Default coordinates (Nashville)
-latitude = st.number_input('Latitude', value=36.1676029)
-longitude = st.number_input('Longitude', value=-86.8521476)
+# Add location button
+if st.button('Get My Location'):
+    loc = st.experimental_get_user_geo_location()
+    if loc:
+        st.session_state.latitude = loc['latitude']
+        st.session_state.longitude = loc['longitude']
+        st.rerun()
 
-# Update coordinates if location is shared
-if location_data:
-    latitude = st.number_input('Latitude', value=location_data['lat'])
-    longitude = st.number_input('Longitude', value=location_data['lon'])
+# Use session state for the coordinates
+latitude = st.number_input('Latitude', value=st.session_state.latitude)
+longitude = st.number_input('Longitude', value=st.session_state.longitude)
 
-if st.button('Fetch Weather Data'):
-    response = fetch_weather_data(latitude, longitude)
+# Store any changes back to session state
+st.session_state.latitude = latitude
+st.session_state.longitude = longitude
 
     # Display current weather
     st.header('Current Weather')
