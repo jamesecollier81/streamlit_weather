@@ -10,6 +10,7 @@ import altair as alt
 import streamlit.components.v1 as components
 from streamlit.components.v1 import html as html_component
 import json
+from urllib.parse import parse_qs
 
 # Setup the Open-Meteo API client with cache and retry on error
 @st.cache_resource
@@ -62,10 +63,6 @@ if st.session_state.location_requested:
     location_container = st.empty()
     location_container.info("Requesting location access...")
     
-    # Create a unique key for component communication
-    loc_key = "geolocation_component"
-    
-    # Updated JavaScript with proper Streamlit component communication
     geolocation_js = """
     <script>
     function getLocation() {
@@ -76,18 +73,10 @@ if st.session_state.location_requested:
                     document.getElementById('status').innerText = "Location received!";
                     const lat = position.coords.latitude;
                     const lon = position.coords.longitude;
-                    // Send data back to Streamlit
-                    const data = {
-                        latitude: lat,
-                        longitude: lon
-                    };
-                    // Use Streamlit component API to send data
-                    window.parent.postMessage({
-                        type: "streamlit:setComponentValue",
-                        value: data,
-                        dataType: "json",
-                        componentIndex: 0
-                    }, "*");
+                    
+                    // Redirect with query parameters
+                    window.parent.location.href = window.parent.location.pathname + 
+                        "?lat=" + lat + "&lon=" + lon;
                 },
                 function(error) {
                     document.getElementById('status').innerText = "Error: " + error.message;
@@ -104,18 +93,20 @@ if st.session_state.location_requested:
     <div id="status">Initializing geolocation...</div>
     """
     
-    # Pass component_value to get the returned value
-    location_data = components.html(geolocation_js, height=50)
+    # Display the JavaScript component
+    components.html(geolocation_js, height=50)
     
-    # Process returned location data
-    if location_data:
-        st.session_state.latitude = location_data.get('latitude')
-        st.session_state.longitude = location_data.get('longitude')
+    # Check query parameters for location data
+    query_params = st.experimental_get_query_params()
+    if 'lat' in query_params and 'lon' in query_params:
+        st.session_state.latitude = float(query_params['lat'][0])
+        st.session_state.longitude = float(query_params['lon'][0])
         st.session_state.location_requested = False
-        location_container.success(f"Location received: {st.session_state.latitude}, {st.session_state.longitude}")
+        # Clear the query params
+        st.experimental_set_query_params()
         st.rerun()
     
-    # Add placeholder for manual input fallback
+    # Manual input fallback
     manual_input = st.empty()
     with manual_input:
         st.info("If location access fails, you can enter coordinates manually below:")
