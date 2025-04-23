@@ -63,6 +63,7 @@ if st.session_state.location_requested:
     location_container = st.empty()
     location_container.info("Requesting location access...")
     
+    # New approach using localStorage and a button click
     geolocation_js = """
     <script>
     function getLocation() {
@@ -70,13 +71,16 @@ if st.session_state.location_requested:
             document.getElementById('status').innerText = "Requesting location...";
             navigator.geolocation.getCurrentPosition(
                 function(position) {
-                    document.getElementById('status').innerText = "Location received!";
+                    document.getElementById('status').innerText = "Location received! Click Continue below.";
                     const lat = position.coords.latitude;
                     const lon = position.coords.longitude;
                     
-                    // Redirect with query parameters
-                    window.parent.location.href = window.parent.location.pathname + 
-                        "?lat=" + lat + "&lon=" + lon;
+                    // Store in localStorage so it persists between page loads
+                    localStorage.setItem('latitude', lat);
+                    localStorage.setItem('longitude', lon);
+                    
+                    // Show the button to continue
+                    document.getElementById('continue-btn').style.display = 'block';
                 },
                 function(error) {
                     document.getElementById('status').innerText = "Error: " + error.message;
@@ -91,20 +95,57 @@ if st.session_state.location_requested:
     window.onload = getLocation;
     </script>
     <div id="status">Initializing geolocation...</div>
+    <button id="continue-btn" onclick="window.parent.document.getElementById('continue-after-location').click();" 
+            style="display:none; margin-top: 10px; padding: 5px 10px; background-color: #4CAF50; color: white; border: none; cursor: pointer;">
+        Continue with My Location
+    </button>
     """
     
     # Display the JavaScript component
-    components.html(geolocation_js, height=50)
+    components.html(geolocation_js, height=100)
     
-    # Check query parameters for location data
-    query_params = st.experimental_get_query_params()
-    if 'lat' in query_params and 'lon' in query_params:
-        st.session_state.latitude = float(query_params['lat'][0])
-        st.session_state.longitude = float(query_params['lon'][0])
-        st.session_state.location_requested = False
-        # Clear the query params
-        st.experimental_set_query_params()
-        st.rerun()
+    if st.button('Continue', key='continue-after-location', help='Click to continue after location is received'):
+        # Check local storage for location data
+        get_loc_js = """
+        <script>
+        const lat = localStorage.getItem('latitude');
+        const lon = localStorage.getItem('longitude');
+        if (lat && lon) {
+            document.getElementById('lat-value').value = lat;
+            document.getElementById('lon-value').value = lon;
+            document.getElementById('submit-form').click();
+        } else {
+            document.getElementById('result').innerText = "No location data found. Please try again.";
+        }
+        </script>
+        <form id="loc-form">
+            <input type="hidden" id="lat-value" name="lat">
+            <input type="hidden" id="lon-value" name="lon">
+            <button type="submit" id="submit-form" style="display:none;">Submit</button>
+        </form>
+        <div id="result"></div>
+        """
+        
+        components.html(get_loc_js, height=50)
+        
+        # Since we can't directly get values from JavaScript, let's add manual inputs
+        # that we'll pre-populate with values from localStorage
+        st.text("Please enter the coordinates shown by your browser:")
+        lat_col, lon_col = st.columns(2)
+        with lat_col:
+            lat = st.text_input("Latitude")
+        with lon_col:  
+            lon = st.text_input("Longitude")
+            
+        if lat and lon:
+            try:
+                st.session_state.latitude = float(lat)
+                st.session_state.longitude = float(lon)
+                st.session_state.location_requested = False
+                st.success(f"Location set to: {lat}, {lon}")
+                st.rerun()
+            except ValueError:
+                st.error("Please enter valid numeric coordinates")
     
     # Manual input fallback
     manual_input = st.empty()
