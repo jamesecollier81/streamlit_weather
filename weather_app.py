@@ -41,61 +41,84 @@ def fetch_weather_data(latitude, longitude):
 # Streamlit app
 st.title('Weather Forecast App')
 
-# Add JavaScript code for geolocation
+# Add JavaScript code for geolocation with callback
 get_location_js = """
 <script>
-navigator.geolocation.getCurrentPosition(
-    function(position) {
-        var lat = position.coords.latitude;
-        var lon = position.coords.longitude;
-        window.parent.postMessage({
-            type: "streamlit:setLocationData",
-            latitude: lat,
-            longitude: lon
-        }, "*");
-    },
-    function(error) {
-        console.error("Error getting location:", error);
-    }
-);
+function sendLocation() {
+    navigator.geolocation.getCurrentPosition(
+        function(position) {
+            var lat = position.coords.latitude;
+            var lon = position.coords.longitude;
+            document.dispatchEvent(new CustomEvent("location_data", {
+                detail: {
+                    latitude: lat,
+                    longitude: lon
+                }
+            }));
+        },
+        function(error) {
+            document.dispatchEvent(new CustomEvent("location_error", {
+                detail: error.message
+            }));
+        }
+    );
+}
+sendLocation();
 </script>
 """
 
-# Initialize session state for coordinates and location permission
+location_callback_js = """
+<script>
+document.addEventListener("location_data", function(e) {
+    window.parent.postMessage({
+        type: "streamlit",
+        data: e.detail
+    }, "*");
+});
+document.addEventListener("location_error", function(e) {
+    window.parent.postMessage({
+        type: "streamlit",
+        data: {"error": e.detail}
+    }, "*");
+});
+</script>
+"""
+
+# Initialize session state
 if 'latitude' not in st.session_state:
     st.session_state.latitude = 36.1676029
 if 'longitude' not in st.session_state:
     st.session_state.longitude = -86.8521476
-if 'use_location' not in st.session_state:
-    st.session_state.use_location = False
+if 'location_requested' not in st.session_state:
+    st.session_state.location_requested = False
 
 # Add location permission button
-if st.button('Use My Current Location'):
-    st.session_state.use_location = True
-    components.html(get_location_js, height=0)
-    
-# Handle incoming location data
-if st.session_state.use_location:
-    st.write("Waiting for location permission...")
-    components.html("""
-        <script>
-        window.addEventListener('message', function(e) {
-            if (e.data.type === 'streamlit:setLocationData') {
-                window.parent.postMessage({
-                    type: 'streamlit:setComponentValue',
-                    value: e.data
-                }, '*');
-            }
-        });
-        </script>
-    """, height=0)
+col1, col2 = st.columns([1, 3])
+with col1:
+    if st.button('Use My Location'):
+        st.session_state.location_requested = True
+        st.rerun()
 
-# Show manual coordinate input if not using location
-if not st.session_state.use_location:
+# Handle location request
+if st.session_state.location_requested:
+    location_container = st.empty()
+    location_container.info("Requesting location access...")
+    
+    components.html(f"{get_location_js}{location_callback_js}", height=0)
+    
+    # Add placeholder for manual input fallback
+    manual_input = st.empty()
+    with manual_input:
+        st.info("If location access fails, you can enter coordinates manually below:")
+        latitude = st.number_input('Latitude', value=st.session_state.latitude)
+        longitude = st.number_input('Longitude', value=st.session_state.longitude)
+else:
     latitude = st.number_input('Latitude', value=st.session_state.latitude)
     longitude = st.number_input('Longitude', value=st.session_state.longitude)
-    st.session_state.latitude = latitude
-    st.session_state.longitude = longitude
+
+# Store coordinates in session state
+st.session_state.latitude = latitude
+st.session_state.longitude = longitude
 
 # Add a fetch button and store response in session state
 if 'weather_data' not in st.session_state:
