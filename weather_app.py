@@ -105,7 +105,7 @@ if st.session_state.location_requested:
     """
     
     # Pass component_value to get the returned value
-    location_data = html_component(geolocation_js, height=50, key=loc_key)
+    location_data = components.html(geolocation_js, height=50, key=loc_key)
     
     # Process returned location data
     if location_data:
