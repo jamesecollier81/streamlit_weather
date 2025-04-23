@@ -63,14 +63,14 @@ if st.session_state.location_requested:
     location_container = st.empty()
     location_container.info("Requesting location access...")
     
-    # Updated geolocation JavaScript that shows coordinates immediately
+    # Updated geolocation JavaScript with form submission
     geolocation_js = """
     <script>
-    function displayCoordinates(lat, lon) {
-        document.getElementById('coordinates').innerHTML = 
-            `Latitude: <input type="text" id="lat" value="${lat}" readonly style="width: 150px; margin: 5px;"> 
-             Longitude: <input type="text" id="lon" value="${lon}" readonly style="width: 150px; margin: 5px;">`;
+    function updateCoordinates(lat, lon) {
+        document.getElementById('lat-input').value = lat;
+        document.getElementById('lon-input').value = lon;
         document.getElementById('status').innerText = "Location received! Click 'Continue with Location' below";
+        document.getElementById('coordinates-form').style.display = 'block';
         document.getElementById('continue-btn').style.display = 'block';
     }
 
@@ -81,9 +81,7 @@ if st.session_state.location_requested:
                 function(position) {
                     const lat = position.coords.latitude;
                     const lon = position.coords.longitude;
-                    localStorage.setItem('latitude', lat);
-                    localStorage.setItem('longitude', lon);
-                    displayCoordinates(lat, lon);
+                    updateCoordinates(lat, lon);
                 },
                 function(error) {
                     document.getElementById('status').innerText = "Error: " + error.message;
@@ -97,7 +95,16 @@ if st.session_state.location_requested:
     window.onload = getLocation;
     </script>
     <div id="status">Initializing geolocation...</div>
-    <div id="coordinates"></div>
+    <div id="coordinates-form" style="display:none; margin: 10px 0;">
+        <div style="margin-bottom: 10px;">
+            <label for="lat-input">Latitude:</label>
+            <input type="text" id="lat-input" readonly style="width: 150px; margin-left: 5px;">
+        </div>
+        <div>
+            <label for="lon-input">Longitude:</label>
+            <input type="text" id="lon-input" readonly style="width: 150px; margin-left: 5px;">
+        </div>
+    </div>
     <button id="continue-btn" onclick="window.parent.document.getElementById('continue-after-location').click();" 
             style="display:none; margin-top: 10px; padding: 5px 10px; background-color: #4CAF50; color: white; border: none; cursor: pointer;">
         Continue with Location
@@ -105,21 +112,27 @@ if st.session_state.location_requested:
     """
     
     # Display the JavaScript component
-    components.html(geolocation_js, height=150)
+    components.html(geolocation_js, height=200)
     
     # Hidden button that will be triggered by JavaScript
     if st.button('Continue', key='continue-after-location', help='Click to continue after location is received'):
-        lat = st.session_state.get('latitude')
-        lon = st.session_state.get('longitude')
-        
+        lat_col, lon_col = st.columns(2)
+        with lat_col:
+            lat = st.text_input("Confirm Latitude")
+        with lon_col:
+            lon = st.text_input("Confirm Longitude")
+            
         if lat and lon:
-            st.session_state.location_requested = False
-            st.success(f"Location set to: {lat}, {lon}")
-            st.rerun()
-        else:
-            st.error("Location data not found. Please try again.")
+            try:
+                st.session_state.latitude = float(lat)
+                st.session_state.longitude = float(lon)
+                st.session_state.location_requested = False
+                st.success(f"Location set to: {lat}, {lon}")
+                st.rerun()
+            except ValueError:
+                st.error("Please enter valid numeric coordinates")
     
-    # Add placeholder for manual input fallback
+    # Manual input fallback
     manual_input = st.empty()
     with manual_input:
         st.info("If location access fails, you can enter coordinates manually below:")
