@@ -41,26 +41,68 @@ def fetch_weather_data(latitude, longitude):
 # Streamlit app
 st.title('Weather Forecast App')
 
-# Initialize session state for coordinates if not already present
+# Add JavaScript code for geolocation
+get_location_js = """
+<script>
+navigator.geolocation.getCurrentPosition(
+    function(position) {
+        var lat = position.coords.latitude;
+        var lon = position.coords.longitude;
+        window.parent.postMessage({
+            type: "streamlit:setLocationData",
+            latitude: lat,
+            longitude: lon
+        }, "*");
+    },
+    function(error) {
+        console.error("Error getting location:", error);
+    }
+);
+</script>
+"""
+
+# Initialize session state for coordinates and location permission
 if 'latitude' not in st.session_state:
     st.session_state.latitude = 36.1676029
 if 'longitude' not in st.session_state:
     st.session_state.longitude = -86.8521476
+if 'use_location' not in st.session_state:
+    st.session_state.use_location = False
 
-# Use session state for the coordinates
-latitude = st.number_input('Latitude', value=st.session_state.latitude)
-longitude = st.number_input('Longitude', value=st.session_state.longitude)
+# Add location permission button
+if st.button('Use My Current Location'):
+    st.session_state.use_location = True
+    components.html(get_location_js, height=0)
+    
+# Handle incoming location data
+if st.session_state.use_location:
+    st.write("Waiting for location permission...")
+    components.html("""
+        <script>
+        window.addEventListener('message', function(e) {
+            if (e.data.type === 'streamlit:setLocationData') {
+                window.parent.postMessage({
+                    type: 'streamlit:setComponentValue',
+                    value: e.data
+                }, '*');
+            }
+        });
+        </script>
+    """, height=0)
 
-# Store any changes back to session state
-st.session_state.latitude = latitude
-st.session_state.longitude = longitude
+# Show manual coordinate input if not using location
+if not st.session_state.use_location:
+    latitude = st.number_input('Latitude', value=st.session_state.latitude)
+    longitude = st.number_input('Longitude', value=st.session_state.longitude)
+    st.session_state.latitude = latitude
+    st.session_state.longitude = longitude
 
 # Add a fetch button and store response in session state
 if 'weather_data' not in st.session_state:
     st.session_state.weather_data = None
 
 if st.button('Fetch Weather Data'):
-    response = fetch_weather_data(latitude, longitude)
+    response = fetch_weather_data(st.session_state.latitude, st.session_state.longitude)
     st.session_state.weather_data = response
     st.rerun()
 
