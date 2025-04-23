@@ -41,46 +41,32 @@ def fetch_weather_data(latitude, longitude):
 # Streamlit app
 st.title('Weather Forecast App')
 
-# Add JavaScript code for geolocation with callback
+# Function to update location in session state
+def handle_location_update():
+    location_data = st.experimental_get_query_params()
+    if 'lat' in location_data and 'lon' in location_data:
+        st.session_state.latitude = float(location_data['lat'][0])
+        st.session_state.longitude = float(location_data['lon'][0])
+        st.session_state.location_requested = False
+        st.rerun()
+
+# Add JavaScript code for geolocation with proper callback
 get_location_js = """
 <script>
 function sendLocation() {
     navigator.geolocation.getCurrentPosition(
         function(position) {
-            var lat = position.coords.latitude;
-            var lon = position.coords.longitude;
-            document.dispatchEvent(new CustomEvent("location_data", {
-                detail: {
-                    latitude: lat,
-                    longitude: lon
-                }
-            }));
+            const searchParams = new URLSearchParams(window.location.search);
+            searchParams.set('lat', position.coords.latitude);
+            searchParams.set('lon', position.coords.longitude);
+            window.location.search = searchParams.toString();
         },
         function(error) {
-            document.dispatchEvent(new CustomEvent("location_error", {
-                detail: error.message
-            }));
+            console.error('Error getting location:', error);
         }
     );
 }
 sendLocation();
-</script>
-"""
-
-location_callback_js = """
-<script>
-document.addEventListener("location_data", function(e) {
-    window.parent.postMessage({
-        type: "streamlit",
-        data: e.detail
-    }, "*");
-});
-document.addEventListener("location_error", function(e) {
-    window.parent.postMessage({
-        type: "streamlit",
-        data: {"error": e.detail}
-    }, "*");
-});
 </script>
 """
 
@@ -92,10 +78,13 @@ if 'longitude' not in st.session_state:
 if 'location_requested' not in st.session_state:
     st.session_state.location_requested = False
 
+# Handle any incoming location updates
+handle_location_update()
+
 # Add location permission button
 col1, col2 = st.columns([1, 3])
 with col1:
-    if st.button('Use My Location'):
+    if st.button('Use My Location', key='location_button'):
         st.session_state.location_requested = True
         st.rerun()
 
@@ -103,18 +92,14 @@ with col1:
 if st.session_state.location_requested:
     location_container = st.empty()
     location_container.info("Requesting location access...")
-    
-    components.html(f"{get_location_js}{location_callback_js}", height=0)
-    
-    # Add placeholder for manual input fallback
-    manual_input = st.empty()
-    with manual_input:
-        st.info("If location access fails, you can enter coordinates manually below:")
-        latitude = st.number_input('Latitude', value=st.session_state.latitude)
-        longitude = st.number_input('Longitude', value=st.session_state.longitude)
-else:
-    latitude = st.number_input('Latitude', value=st.session_state.latitude)
-    longitude = st.number_input('Longitude', value=st.session_state.longitude)
+    components.html(get_location_js, height=0)
+
+# Show current coordinates
+st.write(f"Current coordinates: {st.session_state.latitude:.6f}, {st.session_state.longitude:.6f}")
+
+# Always show manual input as fallback
+latitude = st.number_input('Latitude', value=st.session_state.latitude)
+longitude = st.number_input('Longitude', value=st.session_state.longitude)
 
 # Store coordinates in session state
 st.session_state.latitude = latitude
