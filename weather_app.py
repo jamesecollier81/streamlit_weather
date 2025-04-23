@@ -8,6 +8,7 @@ import matplotlib.dates as mdates
 from datetime import datetime, timedelta, date
 import altair as alt
 import streamlit.components.v1 as components
+from streamlit.components.v1 import html as html_component
 import json
 
 # Setup the Open-Meteo API client with cache and retry on error
@@ -41,35 +42,6 @@ def fetch_weather_data(latitude, longitude):
 # Streamlit app
 st.title('Weather Forecast App')
 
-# Function to update location in session state
-def handle_location_update():
-    location_data = st.experimental_get_query_params()
-    if 'lat' in location_data and 'lon' in location_data:
-        st.session_state.latitude = float(location_data['lat'][0])
-        st.session_state.longitude = float(location_data['lon'][0])
-        st.session_state.location_requested = False
-        st.rerun()
-
-# Add JavaScript code for geolocation with proper callback
-get_location_js = """
-<script>
-function sendLocation() {
-    navigator.geolocation.getCurrentPosition(
-        function(position) {
-            const searchParams = new URLSearchParams(window.location.search);
-            searchParams.set('lat', position.coords.latitude);
-            searchParams.set('lon', position.coords.longitude);
-            window.location.search = searchParams.toString();
-        },
-        function(error) {
-            console.error('Error getting location:', error);
-        }
-    );
-}
-sendLocation();
-</script>
-"""
-
 # Initialize session state
 if 'latitude' not in st.session_state:
     st.session_state.latitude = 36.1676029
@@ -77,9 +49,6 @@ if 'longitude' not in st.session_state:
     st.session_state.longitude = -86.8521476
 if 'location_requested' not in st.session_state:
     st.session_state.location_requested = False
-
-# Handle any incoming location updates
-handle_location_update()
 
 # Add location permission button
 col1, col2 = st.columns([1, 3])
@@ -92,14 +61,72 @@ with col1:
 if st.session_state.location_requested:
     location_container = st.empty()
     location_container.info("Requesting location access...")
-    components.html(get_location_js, height=0)
+    
+    # Create a unique key for component communication
+    loc_key = "geolocation_component"
+    
+    # Updated JavaScript with proper Streamlit component communication
+    updated_js = """
+    <script>
+    function getLocation() {
+        if (navigator.geolocation) {
+            document.getElementById('status').innerText = "Requesting location...";
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    document.getElementById('status').innerText = "Location received!";
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    // Send data back to Streamlit
+                    const data = {
+                        latitude: lat,
+                        longitude: lon
+                    };
+                    // Use Streamlit component API to send data
+                    window.parent.postMessage({
+                        type: "streamlit:setComponentValue",
+                        value: data,
+                        dataType: "json",
+                        componentIndex: 0
+                    }, "*");
+                },
+                function(error) {
+                    document.getElementById('status').innerText = "Error: " + error.message;
+                }
+            );
+        } else {
+            document.getElementById('status').innerText = "Geolocation not supported by your browser";
+        }
+    }
+    
+    // Call getLocation when the component loads
+    window.onload = getLocation;
+    </script>
+    <div id="status">Initializing geolocation...</div>
+    """
+    
+    # Pass component_value to get the returned value
+    location_data = html_component(updated_js, height=50, key=loc_key)
+    
+    # Process returned location data
+    if location_data:
+        st.session_state.latitude = location_data.get('latitude')
+        st.session_state.longitude = location_data.get('longitude')
+        st.session_state.location_requested = False
+        location_container.success(f"Location received: {st.session_state.latitude}, {st.session_state.longitude}")
+        st.rerun()
+    
+    # Add placeholder for manual input fallback
+    manual_input = st.empty()
+    with manual_input:
+        st.info("If location access fails, you can enter coordinates manually below:")
+        latitude = st.number_input('Latitude', value=st.session_state.latitude)
+        longitude = st.number_input('Longitude', value=st.session_state.longitude)
 
-# Show current coordinates
-st.write(f"Current coordinates: {st.session_state.latitude:.6f}, {st.session_state.longitude:.6f}")
-
-# Always show manual input as fallback
-latitude = st.number_input('Latitude', value=st.session_state.latitude)
-longitude = st.number_input('Longitude', value=st.session_state.longitude)
+# Show current coordinates when not requesting location
+if not st.session_state.location_requested:
+    st.write(f"Current coordinates: {st.session_state.latitude:.6f}, {st.session_state.longitude:.6f}")
+    latitude = st.number_input('Latitude', value=st.session_state.latitude)
+    longitude = st.number_input('Longitude', value=st.session_state.longitude)
 
 # Store coordinates in session state
 st.session_state.latitude = latitude
